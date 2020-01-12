@@ -14,7 +14,7 @@ from tqdm import tqdm
 import pdb
 
 sys.path.append('%s/lib' % os.path.dirname(os.path.realpath(__file__)))
-from gnn_lib import GNNLIB
+from hgnn_lib import HGNNLIB
 from pytorch_util import weights_init, gnn_spmm
 
 
@@ -56,7 +56,7 @@ class DGCNN(nn.Module):
         node_degs = [torch.Tensor(graph_list[i].degs) + 1 for i in range(len(graph_list))]
         node_degs = torch.cat(node_degs).unsqueeze(1)
 
-        n2n_sp, e2n_sp, subg_sp = GNNLIB.PrepareSparseMatrices(graph_list)
+        n2n_sp, e2n_sp, subg_sp = HGNNLIB.PrepareSparseMatrices(graph_list) # TODO: Pass S_list to this
 
         if torch.cuda.is_available() and isinstance(node_feat, torch.cuda.FloatTensor):
             n2n_sp = n2n_sp.cuda()

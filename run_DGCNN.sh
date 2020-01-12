@@ -7,7 +7,7 @@ test_number=${3-0}  # if specified, use the last test_number graphs as test data
 
 # general settings
 gm=DGCNN  # model
-gpu_or_cpu=gpu
+gpu_or_cpu=cpu # :GOVIND: was gpu
 GPU=0  # select the GPU number
 CONV_SIZE="32-32-32-1"
 sortpooling_k=0.6  # If k <= 1, then k is set to an integer so that k% of graphs have nodes less than this integer
@@ -19,7 +19,7 @@ dropout=True
 # dataset-specific settings
 case ${DATA} in
 MUTAG)
-  num_epochs=300
+  num_epochs=10 # :GOVIND: was 300
   learning_rate=0.0001
   ;;
 ENZYMES)
