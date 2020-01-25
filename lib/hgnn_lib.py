@@ -4,13 +4,15 @@ import os
 import sys
 import torch
 import pdb
+import scipy
 
 class _hgnn_lib(object):
 
     def __init__(self):
         pass
 
-    def PrepareSparseMatrices(self, S_list):
+    def PrepareSparseMatrices(self, hypergraph_list, use_S_=False):
+        S_list = [hypergraph.S if not use_S_ else hypergraph.S_ for hypergraph in hypergraph_list]
         full_I = []
         full_J = []
         full_V = []
@@ -28,9 +30,10 @@ class _hgnn_lib(object):
             list_J += list(range(I_prefix, I_prefix + n_rows))
             I_prefix += n_rows
             J_prefix += n_cols
-        S = torch.sparse.FloatTensor(torch.LongTensor([full_I, full_J]), torch.FloatTensor(full_V), torch.Size([I_prefix, J_prefix]))
-        list_nodes_matrix = torch.sparse.FloatTensor(torch.LongTensor([list_I, list_J]), torch.LongTensor([1]*len(list_I)), torch.Size([len(S_list), I_prefix]))
-        return S, list_nodes_matrix
+        n2f_sp = torch.sparse.FloatTensor(torch.LongTensor([full_I, full_J]), torch.FloatTensor(full_V), torch.Size([I_prefix, J_prefix]))
+        f2n_sp = torch.sparse.FloatTensor(torch.LongTensor([full_J, full_I]), torch.FloatTensor(full_V), torch.Size([J_prefix, I_prefix]))
+        subhg_sp = torch.sparse.FloatTensor(torch.LongTensor([list_I, list_J]), torch.LongTensor([1]*len(list_I)), torch.Size([len(S_list), I_prefix]))
+        return n2f_sp, f2n_sp, subhg_sp
 
 HGNNLIB = _hgnn_lib()
 
