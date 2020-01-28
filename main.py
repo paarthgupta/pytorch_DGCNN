@@ -135,7 +135,11 @@ class Classifier(nn.Module):
 
 def loop_dataset(g_list, classifier, sample_idxes, optimizer=None, bsize=cmd_args.batch_size):
     total_loss = []
-    total_iters = (len(sample_idxes) + (bsize - 1) * (optimizer is None)) // bsize
+    if len(sample_idxes) < bsize:
+        total_iters=1
+    else:
+        total_iters = ((len(sample_idxes) + (bsize - 1) * (optimizer is None)) // bsize) 
+    print(total_iters)
     pbar = tqdm(range(total_iters), unit='batch')
     all_targets = []
     all_scores = []

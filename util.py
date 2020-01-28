@@ -32,26 +32,32 @@ cmd_opt.add_argument('-dropout', type=bool, default=False, help='whether add dro
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
 cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whether to extract final graph features')
 
-cmd_args, _ = cmd_opt.parse_known_args()
+cmd_args, _ = cmd_opt.parse_known_args('')
 
 cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
 if len(cmd_args.latent_dim) == 1:
     cmd_args.latent_dim = cmd_args.latent_dim[0]
 
 class GNNGraph(object):
-    def __init__(self, g, label, node_tags=None, node_features=None):
+    def __init__(self, g, label, node_tags=None, node_features=None, num_nodes=None, make_bip=False):
         '''
             g: a networkx graph
             label: an integer graph label
             node_tags: a list of integer node tags
             node_features: a numpy array of continuous node features
+            num_nodes: to be used as a bipartite parameter; denotes num of nodes in first set
+            make_bip: whether to make it a bipartite graph or not.
         '''
         self.num_nodes = len(node_tags)
         self.node_tags = node_tags
         self.label = label
         self.node_features = node_features  # numpy array (node_num * feature_dim)
         self.degs = list(dict(g.degree).values())
-
+        self.nodes = g.nodes()
+        self.num_edges = len(g.edges())
+        self.node_bip_tags = None
+        if make_bip:
+            self.node_bip_tags = np.array([int(i < num_nodes) for i in range(self.num_nodes)])
         if len(g.edges()) != 0:
             x, y = zip(*g.edges())
             self.num_edges = len(x)        
@@ -77,6 +83,7 @@ class GNNGraph(object):
                 self.edge_features.append(edge_features[edge])
                 self.edge_features.append(edge_features[edge])  # add reversed edges
             self.edge_features = np.concatenate(self.edge_features, 0)
+
 
 
 def load_data():

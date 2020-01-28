@@ -96,6 +96,7 @@ class DGCNN(nn.Module):
             cur_message_layer = torch.tanh(normalized_linear)
             cat_message_layers.append(cur_message_layer)
             lv += 1
+#             pdb.set_trace()
 
         cur_message_layer = torch.cat(cat_message_layers, 1)
 
