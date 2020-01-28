@@ -17,12 +17,13 @@ sys.path.append('%s/lib' % os.path.dirname(os.path.realpath(__file__)))
 from pytorch_util import weights_init
 
 class MLPRegression(nn.Module):
-    def __init__(self, input_size, hidden_size, with_dropout=False):
+    def __init__(self, input_size, hidden_size, with_dropout=False, dropout_prob = 0.5):
         super(MLPRegression, self).__init__()
 
         self.h1_weights = nn.Linear(input_size, hidden_size)
         self.h2_weights = nn.Linear(hidden_size, 1)
         self.with_dropout = with_dropout
+        self.dropout_prob = dropout_prob
 
         weights_init(self)
 
@@ -31,7 +32,7 @@ class MLPRegression(nn.Module):
         h1 = F.relu(h1)
 
         if self.with_dropout:
-            h1 = F.dropout(h1, training=self.training)
+            h1 = F.dropout(h1, p=self.dropout_prob, training=self.training)
         pred = self.h2_weights(h1)[:, 0]
 
         if y is not None:
@@ -44,20 +45,21 @@ class MLPRegression(nn.Module):
             return pred
 
 class MLPClassifier(nn.Module):
-    def __init__(self, input_size, hidden_size, num_class, with_dropout=False):
+    def __init__(self, input_size, hidden_size, num_class, with_dropout=False, dropout_prob = 0.5):
         super(MLPClassifier, self).__init__()
 
         self.h1_weights = nn.Linear(input_size, hidden_size)
         self.h2_weights = nn.Linear(hidden_size, num_class)
         self.with_dropout = with_dropout
-
+        self.dropout_prob = dropout_prob
+        
         weights_init(self)
 
     def forward(self, x, y = None):
         h1 = self.h1_weights(x)
         h1 = F.relu(h1)
         if self.with_dropout:
-            h1 = F.dropout(h1, training=self.training)
+            h1 = F.dropout(h1, p=self.dropout_prob, training=self.training)
 
         logits = self.h2_weights(h1)
         logits = F.log_softmax(logits, dim=1)

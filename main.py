@@ -39,9 +39,9 @@ class Classifier(nn.Module):
                 out_dim = self.gnn.dense_dim
             else:
                 out_dim = cmd_args.latent_dim
-        self.mlp = MLPClassifier(input_size=out_dim, hidden_size=cmd_args.hidden, num_class=cmd_args.num_class, with_dropout=cmd_args.dropout)
+        self.mlp = MLPClassifier(input_size=out_dim, hidden_size=cmd_args.hidden, num_class=cmd_args.num_class, with_dropout=cmd_args.dropout, dropout_prob = cmd_args.dropout_prob)
         if regression:
-            self.mlp = MLPRegression(input_size=out_dim, hidden_size=cmd_args.hidden, with_dropout=cmd_args.dropout)
+            self.mlp = MLPRegression(input_size=out_dim, hidden_size=cmd_args.hidden, with_dropout=cmd_args.dropout, dropout_prob = cmd_args.dropout_prob)
 
     def PrepareFeatureLabel(self, batch_graph):
         if self.regression:
@@ -49,6 +49,7 @@ class Classifier(nn.Module):
         else:
             labels = torch.LongTensor(len(batch_graph))
         n_nodes = 0
+        n_edges = 0
 
         if batch_graph[0].node_tags is not None:
             node_tag_flag = True
@@ -65,12 +66,14 @@ class Classifier(nn.Module):
         if cmd_args.edge_feat_dim > 0:
             edge_feat_flag = True
             concat_edge_feat = []
+            concat_edge_tag = []
         else:
             edge_feat_flag = False
 
         for i in range(len(batch_graph)):
             labels[i] = batch_graph[i].label
             n_nodes += batch_graph[i].num_nodes
+            n_edges += batch_graph[i].S.shape[1]
             if node_tag_flag == True:
                 concat_tag += batch_graph[i].node_tags
             if node_feat_flag == True:
@@ -78,14 +81,15 @@ class Classifier(nn.Module):
                 concat_feat.append(tmp)
             if edge_feat_flag == True:
                 if batch_graph[i].edge_features is not None:  # in case no edge in graph[i]
-                    tmp = torch.from_numpy(batch_graph[i].edge_features).type('torch.FloatTensor')
-                    concat_edge_feat.append(tmp)
+                    concat_edge_tag += batch_graph[i].edge_features
+#                     tmp = torch.from_numpy(batch_graph[i].edge_features).type('torch.FloatTensor')
+#                     concat_edge_feat.append(tmp)
 
         if node_tag_flag == True:
             concat_tag = torch.LongTensor(concat_tag).view(-1, 1)
             node_tag = torch.zeros(n_nodes, cmd_args.feat_dim)
             node_tag.scatter_(1, concat_tag, 1)
-
+            
         if node_feat_flag == True:
             node_feat = torch.cat(concat_feat, 0)
 
@@ -100,7 +104,11 @@ class Classifier(nn.Module):
             node_feat = torch.ones(n_nodes, 1)  # use all-one vector as node features
         
         if edge_feat_flag == True:
-            edge_feat = torch.cat(concat_edge_feat, 0)
+            concat_edge_tag = torch.LongTensor(concat_edge_tag).view(-1, 1)
+            edge_tag = torch.zeros(n_edges, cmd_args.edge_feat_dim)
+            edge_tag.scatter_(1, concat_edge_tag, 1)
+#             pdb.set_trace()
+            edge_feat = edge_tag.type_as(node_feat)
 
         if cmd_args.mode == 'gpu':
             node_feat = node_feat.cuda()

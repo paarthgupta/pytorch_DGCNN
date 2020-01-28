@@ -8,6 +8,8 @@ import os
 import networkx as nx
 import pdb
 import argparse
+from sklearn.decomposition import NMF
+from scipy.sparse import csr_matrix
 
 cmd_opt = argparse.ArgumentParser(description='Argparser for graph_classification')
 cmd_opt.add_argument('-mode', default='cpu', help='cpu/gpu')
@@ -29,6 +31,7 @@ cmd_opt.add_argument('-hidden', type=int, default=100, help='dimension of mlp hi
 cmd_opt.add_argument('-max_lv', type=int, default=4, help='max rounds of message passing')
 cmd_opt.add_argument('-learning_rate', type=float, default=0.0001, help='init learning_rate')
 cmd_opt.add_argument('-dropout', type=bool, default=False, help='whether add dropout after dense layer')
+cmd_opt.add_argument('-dropout_prob', type=float, default=0.5, help='dropout prob')
 cmd_opt.add_argument('-printAUC', type=bool, default=False, help='whether to print AUC (for binary classification only)')
 cmd_opt.add_argument('-extract_features', type=bool, default=False, help='whether to extract final graph features')
 
@@ -37,6 +40,7 @@ cmd_args, _ = cmd_opt.parse_known_args('')
 cmd_args.latent_dim = [int(x) for x in cmd_args.latent_dim.split('-')]
 if len(cmd_args.latent_dim) == 1:
     cmd_args.latent_dim = cmd_args.latent_dim[0]
+
 
 class GNNGraph(object):
     def __init__(self, g, label, node_tags=None, node_features=None, num_nodes=None, make_bip=False):
@@ -84,6 +88,36 @@ class GNNGraph(object):
                 self.edge_features.append(edge_features[edge])  # add reversed edges
             self.edge_features = np.concatenate(self.edge_features, 0)
 
+    
+class HGNNHypergraph(object):
+    def __init__(self, S, label, node_tags=None, node_features=None, edge_features = None):
+        '''
+            S: a nodes x hyperedges incidence matrix of hypergraph
+            label: an integer hypergraph label
+            node_tags: a list of integer node tags
+            node_features: a numpy array of continuous node features
+        '''
+        self.S = S
+        self.num_nodes = len(node_tags)
+        self.node_tags = node_tags
+        self.label = label
+        self.node_features = node_features  # numpy array (node_num * feature_dim)
+        self.hdegs = np.array(S.sum(axis=1)).ravel()
+        self.hyperedge_sizes = np.array(S.sum(axis=0)).ravel()
+        self.edge_features = edge_features # This is the same as hyperedge tags (labels)
+#         if S.shape[0] < S.shape[1]:
+#             k = S.shape[0]
+#             print("nmf start")
+#             model = NMF(k)
+#             self.S_ = model.fit_transform(S)
+#             print("nmf done")
+#             self.C = model.components_
+#         else:
+        self.S_ = S.copy()
+        n = S.shape[0]
+        self.C = csr_matrix(([1]*n, (range(n), range(n))), shape=(n, n))
+        self.hdegs_ = np.array(self.S_.sum(axis=1)).ravel()
+        self.hyperedge_sizes_ = np.array(self.S_.sum(axis=0)).ravel()
 
 
 def load_data():
