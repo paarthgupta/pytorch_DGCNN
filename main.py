@@ -44,6 +44,7 @@ class Classifier(nn.Module):
             self.mlp = MLPRegression(input_size=out_dim, hidden_size=cmd_args.hidden, with_dropout=cmd_args.dropout, dropout_prob = cmd_args.dropout_prob)
 
     def PrepareFeatureLabel(self, batch_graph):
+        bip_flag = all([g.node_bip_tags is not None for g in batch_graph])
         if self.regression:
             labels = torch.FloatTensor(len(batch_graph))
         else:
@@ -54,6 +55,8 @@ class Classifier(nn.Module):
         if batch_graph[0].node_tags is not None:
             node_tag_flag = True
             concat_tag = []
+            if bip_flag:
+                concat_bip_tag = []
         else:
             node_tag_flag = False
 
@@ -73,9 +76,11 @@ class Classifier(nn.Module):
         for i in range(len(batch_graph)):
             labels[i] = batch_graph[i].label
             n_nodes += batch_graph[i].num_nodes
-            n_edges += batch_graph[i].S.shape[1]
+            n_edges += batch_graph[i].num_edges
             if node_tag_flag == True:
                 concat_tag += batch_graph[i].node_tags
+                if bip_flag:
+                    concat_bip_tag += batch_graph[i].node_bip_tags
             if node_feat_flag == True:
                 tmp = torch.from_numpy(batch_graph[i].node_features).type('torch.FloatTensor')
                 concat_feat.append(tmp)
@@ -89,6 +94,10 @@ class Classifier(nn.Module):
             concat_tag = torch.LongTensor(concat_tag).view(-1, 1)
             node_tag = torch.zeros(n_nodes, cmd_args.feat_dim)
             node_tag.scatter_(1, concat_tag, 1)
+            if bip_flag:
+                node_bip_tag = torch.zeros(n_nodes, 1)
+                node_bip_tag.scatter_(1, concat_bip_tag, 1)
+                node_tag = torch.cat(node_tag, node_bip_tag)
             
         if node_feat_flag == True:
             node_feat = torch.cat(concat_feat, 0)
